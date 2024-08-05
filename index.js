@@ -19,13 +19,13 @@ var db = {
     setKey: function (key, value) {
         var data = this.get();
         data[key] = value;
-        fs.writeFileSync('db.json', JSON.stringify(data));
+        fs.writeFileSync('db.json', JSON.stringify(data, null, 2));
     },
     getKey: function (key) {
         return this.get()[key];
     },
     set: function (data) {
-        fs.writeFileSync('db.json', JSON.stringify(data));
+        fs.writeFileSync('db.json', JSON.stringify(data, null, 2));
     }
 }
 
@@ -83,9 +83,141 @@ app.get('/auth/discord/callback',
     }
 );
 
+function getFileIcon(fileName) {
+    const ext = fileName.split('.').pop();
+    switch (ext) {
+        case 'doc':
+        case 'docx':
+            return 'bi-file-earmark-word';
+        case 'xls':
+        case 'xlsx':
+            return 'bi-file-earmark-excel';
+        case 'ppt':
+        case 'pptx':
+            return 'bi-filetype-pptx';
+        case 'pdf':
+            return 'bi-file-earmark-pdf';
+        case 'zip':
+        case 'rar':
+        case '7z':
+        case 'tar':
+            return 'bi-file-earmark-zip';
+        case 'mp3':
+        case 'wav':
+        case 'flac':
+        case 'ogg':
+        case 'm4a':
+        case 'wma':
+            return 'bi-file-earmark-music';
+        case 'mp4':
+        case 'mkv':
+        case 'avi':
+        case 'mov':
+        case 'wmv':
+        case 'flv':
+        case 'webm':
+            return 'bi-file-earmark-play';
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+        case 'gif':
+        case 'bmp':
+        case 'webp':
+        case 'ico':
+            return 'bi-file-earmark-image';
+        case 'txt':
+        case 'log':
+            return 'bi-file-earmark-text';
+        case 'js': //filetype from now
+            return 'bi-filetype-js';
+        case 'css':
+            return 'bi-filetype-css';
+        case 'html':
+            return 'bi-filetype-html';
+        case 'json':
+            return 'bi-filetype-json';
+        case 'md':
+            return 'bi-filetype-md';
+        case 'csv':
+            return 'bi-filetype-csv';
+        case 'sql':
+            return 'bi-filetype-sql';
+        case 'py':
+            return 'bi-filetype-py';
+        case 'java':
+            return 'bi-filetype-java';
+        case 'ai':
+            return 'bi-filetype-ai';
+        case 'psd':
+            return 'bi-filetype-psd';
+        case 'svg':
+            return 'bi-filetype-svg';
+        case 'heic':
+            return 'bi-filetype-heic';
+        case 'php':
+            return 'bi-filetype-php';
+        case 'key':
+            return 'bi-filetype-key';
+        case 'sass':
+            return 'bi-filetype-sass';
+        case 'mdx':
+            return 'bi-filetype-mdx';
+        case 'jsx':
+            return 'bi-filetype-jsx';
+        case 'rb':
+            return 'bi-filetype-rb';
+        case 'tsx':
+            return 'bi-filetype-tsx';
+        case 'woff':
+        case 'woff2':
+            return 'bi-filetype-woff';
+        case 'ttf':
+            return 'bi-filetype-ttf';
+        case 'otf':
+            return 'bi-filetype-otf';
+        case 'exe':
+            return 'bi-filetype-exe';
+        case 'aac':
+            return 'bi-filetype-aac';
+        case 'raw':
+            return 'bi-filetype-raw';
+        case 'tiff':
+            return 'bi-filetype-tiff';
+        case 'yml':
+        case 'yaml':
+            return 'bi-filetype-yml';
+        case 'xml':
+        case 'c':
+        case 'ts':
+        case 'cpp':
+        case 'h':
+        case 'hpp':
+        case 'go':
+        case 'cs':
+        case 'swift':
+        case 'kt':
+        case 'rs':
+        case 'lua':
+        case 'sh':
+        case 'bat':
+        case 'ps1':
+        case 'cmd':
+        case 'pl':
+        case 'r':
+        case 'm':
+        case 'v':
+        case 'vb':
+        case 'f':
+            return 'bi-file-earmark-code';
+        default:
+            return 'bi-file-earmark';
+    }
+}
+
 app.get('/', (req, res) => {
     if (!req.isAuthenticated()) return res.render("index");
-    res.render("main");
+    var dbData = db.getKey(req.user.id);
+    res.render("main", { files: dbData ? dbData.files : [], getFileIcon });
 
 });
 
@@ -101,8 +233,14 @@ app.post('/upload', upload.single('file'), (req, res) => {
     data.files.push(req.file);
     db.setKey(req.user.id, data);
     res.render("upload", { fileUrl: `/cdn/${req.file.filename}` });
-  
 });
+
+app.get('/download/:file', (req, res) => {
+    if (!req.isAuthenticated()) return res.redirect('/auth/discord');
+    var file = db.getKey(req.user.id).files.find(f => f.filename === req.params.file);
+    if (!file) return res.status(404).render("error", { error: "Not Found", code: "404", errormessage: "The requested file was not found on this server.", textcolor: "primary", color: "#007bff" });
+    res.download(`uploads/${file.filename}`);
+}); 
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
